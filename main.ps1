@@ -1,3 +1,50 @@
+function Convert-BFToSixSevenLang ([string]$brainfuckCode) {
+    if ([string]::IsNullOrEmpty($brainfuckCode)) { return "" }
+
+    $bf = $brainfuckCode -replace '[^><+\-.,\[\]]', ''
+
+    $mapping = @{
+        '>' = '6'
+        '<' = '7'
+        '+' = '67'
+        '-' = '6767'
+        '.' = '676767'
+        ',' = 'sixseven'
+        '[' = 'six'
+        ']' = 'seven'
+    }
+
+    $sixsevenArray = @()
+    foreach ($char in $bf.ToCharArray()) {
+        $sixsevenArray += $mapping[[string]$char]
+    }
+
+    return $sixsevenArray -join '.'
+}
+
+function Convert-SixSevenLangToBF ([string]$sixsevenCode) {
+    if ([string]::IsNullOrEmpty($sixsevenCode)) { return "" }
+
+    $instructions = @($sixsevenCode -split '\.' | Where-Object { $_ -ne '' })
+
+    $bfArray = @()
+    foreach ($instruction in $instructions) {
+        switch ($instruction) {
+            '6' { $bfArray += '>' }
+            '7' { $bfArray += '<' }
+            '67' { $bfArray += '+' }
+            '6767' { $bfArray += '-' }
+            '676767' { $bfArray += '.' }
+            'sixseven' { $bfArray += ',' }
+            'six' { $bfArray += '[' }
+            'seven' { $bfArray += ']' }
+            default { }
+        }
+    }
+
+    return $bfArray -join ''
+}
+
 function Invoke-Interpreter ([string]$rawCode) {
     if ([string]::IsNullOrEmpty($rawCode)) {
         return
@@ -120,10 +167,10 @@ function Convert-TextToBF ([string]$text) {
 }
 
 Write-Host "╔═══════════════════════════════════════════════════╗"
-Write-Host "║             ~ Brainfuck Interpreter ~             ║"
+Write-Host "║         ~ SixSevenLanguage Interpreter ~          ║"
 Write-Host "║ Options:                                          ║"
-Write-Host "║ 1. Interpret Brainfuck Code                       ║"
-Write-Host "║ 2. Convert Text to Brainfuck                      ║"
+Write-Host "║ 1. Interpret SixSevenLang Code                    ║"
+Write-Host "║ 2. Convert Text to SixSevenLang                   ║"
 Write-Host "║ 3. Exit                                           ║"
 Write-Host "╚═══════════════════════════════════════════════════╝"
 
@@ -140,22 +187,22 @@ switch ($choice) {
             $filePath = Read-Host "Enter the file path"
 
             if (Test-Path $filePath) {
-                $brainfuckCode = Get-Content -Path $filePath -Raw
+                $67Code = Get-Content -Path $filePath -Raw
             } else {
                 Write-Error "$filePath not found."
                 exit
             }
         } else {
-            $brainfuckCode = Read-Host "Paste your Brainfuck code"
+            $67Code = Read-Host "Paste your SixSevenLang code"
         }
 
-        Invoke-Interpreter $brainfuckCode
+        Invoke-Interpreter (Convert-SixSevenLangToBF $67Code)
 
         Write-Host "`nExecution completed." -ForegroundColor Green
     }
     "2" {
         $loadTextFromFile = Read-Host "Load text from file? (y/n)"
-        
+
         if ($loadTextFromFile -eq 'y') {
             $filePath = Read-Host "Enter the file path"
             if (Test-Path $filePath) {
@@ -167,17 +214,17 @@ switch ($choice) {
         } else {
             $textToConvert = Read-Host "Enter the text to convert"
         }
-    
-        $generated = Convert-TextToBF $textToConvert
-    
+
+        $generated67Lang = Convert-BFToSixSevenLang (Convert-TextToBF $textToConvert)
+
         $writeToFile = Read-Host "Write to file? (y/n)"
         if ($writeToFile -eq 'y') {
             $outputFile = Read-Host "Enter output file path"
-            $generated | Out-File -FilePath $outputFile
-            Write-Host -ForegroundColor Green "Brainfuck code written to $outputFile"
+            Set-Content -Path $outputFile -Value $generated67Lang -Encoding utf8NoBOM -NoNewline
+            Write-Host -ForegroundColor Green "SixSevenLang code written to $outputFile"
         } else {
             Write-Host "Generated Code:`n" -ForegroundColor Green
-            Write-Host $generated
+            Write-Host $generated67Lang
         }
     }
     "3" {
